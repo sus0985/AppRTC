@@ -1,21 +1,25 @@
 package com.vlending.apprtc.util
 
-import android.content.Context
-import androidx.core.content.PermissionChecker
-import androidx.core.content.PermissionChecker.checkCallingOrSelfPermission
+import android.Manifest
+import android.app.Activity
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 
 object PermissionUtil {
 
-    fun checkPermission(context: Context): Boolean {
+    private val MANDATORY_PERMISSIONS = arrayOf(
+        Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA
+    )
+
+    fun checkPermission(activity: Activity, requestPermission: (Boolean, Array<String>) -> Unit) {
+        val notGrantedPermissions = mutableListOf<String>()
+
         for (permission in MANDATORY_PERMISSIONS) {
-            if (checkCallingOrSelfPermission(context, permission) != PermissionChecker.PERMISSION_GRANTED) {
-                return false
+            if (ContextCompat.checkSelfPermission(activity, permission) != PackageManager.PERMISSION_GRANTED) {
+                notGrantedPermissions.add(permission)
             }
         }
 
-        return true
+        requestPermission(notGrantedPermissions.isEmpty(), notGrantedPermissions.toTypedArray())
     }
-
-    private val MANDATORY_PERMISSIONS = arrayOf("android.permission.MODIFY_AUDIO_SETTINGS",
-        "android.permission.RECORD_AUDIO", "android.permission.INTERNET")
 }

@@ -2,6 +2,7 @@ package com.vlending.apprtc.view
 
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.databinding.ViewDataBinding
 
@@ -24,5 +25,9 @@ abstract class BaseActivity<VB : ViewDataBinding>(val bind: (LayoutInflater) -> 
 
     fun bind(block: VB.() -> Unit) {
         block(binding)
+    }
+
+    fun showToast(message: String) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 }

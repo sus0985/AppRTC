@@ -1,8 +1,9 @@
 package com.vlending.apprtc.view
 
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
-import android.widget.Toast
+import androidx.core.app.ActivityCompat
 import androidx.lifecycle.lifecycleScope
 import com.vlending.apprtc.databinding.ActivityCallBinding
 import com.vlending.apprtc.di.Injector
@@ -56,10 +57,35 @@ class CallActivity : PeerManager.PeerConnectionEvents, PeerConnection.Observer, 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (!PermissionUtil.checkPermission(this)) {
-            Toast.makeText(this, "PERMISSION IS NOT GRANTED", Toast.LENGTH_SHORT).show()
+        PermissionUtil.checkPermission(this) { isAllGranted, permissions ->
+            if (isAllGranted) {
+                startConnect()
+            } else {
+                ActivityCompat.requestPermissions(
+                    this, permissions, REQUEST_CODE_PERMISSION_CAMERA_AND_AUDIO
+                )
+            }
         }
+    }
 
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        Log.d(TAG, "onRequestPermissionsResult() called with: requestCode = [$requestCode], permissions = [$permissions], grantResults = [$grantResults]")
+        when (requestCode) {
+            REQUEST_CODE_PERMISSION_CAMERA_AND_AUDIO -> {
+                Log.d(TAG, "onRequestPermissionsResult: asdf")
+                if (grantResults.isNotEmpty() &&
+                    grantResults.all { result -> result == PackageManager.PERMISSION_GRANTED }) {
+                    startConnect()
+                } else {
+                    showToast("Permission is not granted")
+                    finish()
+                }
+            }
+        }
+    }
+
+    private fun startConnect() {
         val room = intent.getStringExtra("room") ?: ""
 
         peerManager = PeerManager(this, this, this).apply {
@@ -331,5 +357,6 @@ class CallActivity : PeerManager.PeerConnectionEvents, PeerConnection.Observer, 
 
     companion object {
         private const val TAG = "CallActivity"
+        private const val REQUEST_CODE_PERMISSION_CAMERA_AND_AUDIO = 9000
     }
 }
