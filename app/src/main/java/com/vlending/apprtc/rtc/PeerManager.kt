@@ -219,6 +219,20 @@ class PeerManager(
         }
     }
 
+    fun disconnect() {
+        remoteSink.target = null
+        localSink.target = null
+
+        peerConnection?.close()
+    }
+
+
+    fun stopVideoSource() {
+        executor.execute {
+            videoCapturer?.stopCapture()
+        }
+    }
+
     fun handleMessage(message: String) {
         val msg = JSONObject(message).getString("msg")
 
@@ -254,10 +268,10 @@ class PeerManager(
 
 
     private class ProxyVideoSink : VideoSink {
-        lateinit var target: VideoSink
 
+        var target: VideoSink? = null
         override fun onFrame(frame: VideoFrame?) {
-            target.onFrame(frame)
+            target?.onFrame(frame)
         }
     }
 

@@ -16,9 +16,11 @@ object Injector {
     lateinit var app: Application
 
     private var retrofit: Retrofit? = null
-    private const val BASE_URL = "http://192.168.35.248:8080/"
+    private const val BASE_URL = "http://192.168.0.108:8080/"
 
     fun getService(): ApiService = createRetrofit().create(ApiService::class.java)
+
+    fun getService(url: String): ApiService = createRetrofit(url).create(ApiService::class.java)
 
     fun getIceService(url: String): IceApiService = createRetrofit(url).create(IceApiService::class.java)
 

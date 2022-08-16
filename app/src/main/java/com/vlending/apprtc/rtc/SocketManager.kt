@@ -57,7 +57,14 @@ class SocketManager(private val observer: WebSocket.WebSocketConnectionObserver)
         sendQueue.clear()
     }
 
+    fun disconnect() {
+        state = SocketState.CLOSED
+        val json = JSONObject().put("type", "bye")
+        send(json.toString())
+    }
+
     fun send(message: String) {
+        Log.d(TAG, "send() called with: message = [$message]")
         when (state) {
             SocketState.CONNECTED -> {
                 sendQueue.add(message)
@@ -68,6 +75,10 @@ class SocketManager(private val observer: WebSocket.WebSocketConnectionObserver)
                     put("msg", message)
                 }
                 socket.sendTextMessage(json.toString())
+            }
+            SocketState.CLOSED -> {
+                socket.sendTextMessage(message)
+                socket.disconnect()
             }
             else -> Unit
         }

@@ -21,7 +21,11 @@ import org.json.JSONObject
 import org.webrtc.*
 import org.webrtc.PeerConnection.IceServer
 
-class CallActivity : PeerManager.PeerConnectionEvents, PeerConnection.Observer, WebSocket.WebSocketConnectionObserver, BaseActivity<ActivityCallBinding>({ ActivityCallBinding.inflate(it) }) {
+class CallActivity :
+    PeerManager.PeerConnectionEvents,
+    PeerConnection.Observer,
+    WebSocket.WebSocketConnectionObserver,
+    BaseActivity<ActivityCallBinding>({ ActivityCallBinding.inflate(it) }) {
 
     private lateinit var peerManager: PeerManager
     private lateinit var socketManager: SocketManager
@@ -66,6 +70,16 @@ class CallActivity : PeerManager.PeerConnectionEvents, PeerConnection.Observer, 
                 )
             }
         }
+
+        binding.buttonDisconnect.setOnClickListener {
+            socketManager.send(JSONObject().put("type", "bye").toString())
+            disconnect()
+        }
+    }
+
+    override fun onDestroy() {
+        disconnect()
+        super.onDestroy()
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -105,6 +119,26 @@ class CallActivity : PeerManager.PeerConnectionEvents, PeerConnection.Observer, 
                 roomData.emit(params)
             }
         }
+    }
+
+    private fun disconnect() {
+        peerManager.stopVideoSource()
+
+        peerManager.disconnect()
+
+        binding.callingRemote.release()
+        binding.callingLocal.release()
+
+        if (roomState == RoomState.CONNECTED) {
+            roomState = RoomState.CLOSED
+            socketManager.disconnect()
+            lifecycleScope.launch {
+                service.sendLeave(roomId, clientId)
+                Injector.getService(wssPostUrl).sendDelete(roomId, clientId)
+            }
+        }
+
+        finish()
     }
 
     private fun onRoomDataCollected(roomData: JSONObject) {
@@ -340,7 +374,24 @@ class CallActivity : PeerManager.PeerConnectionEvents, PeerConnection.Observer, 
             if (socketManager.state == SocketState.CONNECTED ||
                 socketManager.state == SocketState.REGISTERED) {
 
-                peerManager.handleMessage(message)
+                val msg = JSONObject(message).getString("msg")
+
+                if (msg.isEmpty()) {
+                    Log.d(TAG, "Message body is empty: $message")
+                    return@runOnUiThread
+                }
+
+                val json = JSONObject(msg)
+
+                when (val type = json.getString("type")) {
+                    "candidate", "answer", "offer" -> {
+                        peerManager.handleMessage(message)
+                    }
+                    "bye" -> {
+                        disconnect()
+                    }
+                    else -> Unit
+                }
             }
         }
     }
